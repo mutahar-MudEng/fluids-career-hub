@@ -1,0 +1,10 @@
+import {supabase} from './supabase';
+import {type Job} from './logic';
+import {toRow,fromRow} from './fields';
+const table='career_jobs';
+async function userId(){if(!supabase)throw new Error('لم يتم إعداد الاتصال بقاعدة البيانات.');const {data,error}=await supabase.auth.getSession();if(error||!data.session?.user.id)throw new Error('انتهت الجلسة. سجّل الدخول مجددًا.');return data.session.user.id;}
+function failure(error:{code?:string;message:string}){console.error('Database operation failed',error.code);if(['42P01','42501','PGRST205'].includes(error.code||''))return new Error('تعذّر الوصول إلى جدول البيانات. راجع تنفيذ schema.sql وصلاحيات RLS في مشروعك.');return new Error('تعذّر الاتصال أو الحفظ في قاعدة البيانات. تحقق من الشبكة ثم حاول مجددًا. لم يتم تأكيد الحفظ.');}
+export async function listJobs():Promise<Job[]>{const uid=await userId();const rows:Job[]=[];for(let offset=0;;offset+=1000){const {data,error}=await supabase!.from(table).select('*').eq('user_id',uid).order('id').range(offset,offset+999);if(error)throw failure(error);rows.push(...(data||[]).map(fromRow));if(!data||data.length<1000)return rows;}}
+export async function saveJobs(jobs:Job[]){if(jobs.length===0)return;if(jobs.length>500)throw new Error('استورد 500 سجل كحد أقصى في المرة الواحدة.');const uid=await userId();const rows=jobs.map(j=>toRow(j,uid));if(new Set(jobs.map(j=>j.id)).size!==jobs.length)throw new Error('ملف الاستيراد يحتوي على معرّفات سجلات مكررة.');const {data,error}=await supabase!.from(table).upsert(rows,{onConflict:'user_id,id'}).select('id');if(error)throw failure(error);if(data?.length!==rows.length)throw new Error('لم يتم تأكيد حفظ كل السجلات. أعد تحميل القائمة للتحقق.');}
+export async function saveJob(job:Job){await saveJobs([job]);}
+export async function deleteJob(id:string){const uid=await userId();const {data,error}=await supabase!.from(table).delete().eq('user_id',uid).eq('id',id).select('id');if(error)throw failure(error);if(!data?.length)throw new Error('لم يعد هذا السجل موجودًا. أعد تحميل القائمة.');}
