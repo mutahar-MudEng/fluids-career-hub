@@ -1,20 +1,15 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   BriefcaseBusiness,
   CalendarClock,
+  SlidersHorizontal,
   MessageSquareText,
   ShieldCheck,
+  Plus,
   ArrowRight,
   ArrowLeft,
-  Plus,
-  Search,
-  SlidersHorizontal,
-  Download,
-  Upload,
   Check,
-  ChevronLeft,
-  ChevronRight,
   Globe
 } from 'lucide-react';
 import { Job, emptyJob, roles, statuses, today, businessDate, followWindow, eligible, followDue } from './logic';
@@ -35,27 +30,26 @@ const translations = {
       { id: 'messages', label: 'مساعد الرسائل', icon: MessageSquareText },
       { id: 'profile', label: 'الملف المهني', icon: ShieldCheck }
     ],
-    stats: {
-      total: { label: 'إجمالي الفرص', hint: 'كل الفرص في مكان واحد' },
-      active: { label: 'طلبات نشطة', hint: 'خطوات المتابعة أقرب' },
-      due: { label: 'تحتاج إلى متابعة', hint: 'إجراءات مستحقة هذا الأسبوع' },
-      match: { label: 'ملاءمة مرتفعة', hint: 'فرص تطابق ملفك المهني' }
-    },
+    stats: [
+      { label: 'إجمالي الفرص', hint: 'كل الفرص في مكان واحد', tone: 'teal' },
+      { label: 'طلبات نشطة', hint: 'خطوات المتابعة أقرب', tone: 'blue' },
+      { label: 'تحتاج إلى متابعة', hint: 'إجراءات مستحقة هذا الأسبوع', tone: 'amber' },
+      { label: 'ملاءمة مرتفعة', hint: 'فرص تطابق ملفك المهني', tone: 'emerald' }
+    ],
     banner: {
       tag: 'بوصلة هذا الأسبوع',
       title: 'الفرصة الأقوى تبدأ بقرار أوضح.',
       desc: 'راجع الإعلانات الرسمية وارتباطها بأقوى المتطلبات بخبرتك، ثم حصّن رسالتك الفردية الآن.',
       action: 'افتح مراجعة الأسبوع'
     },
-    quickList: {
+    quick: {
       title: 'على قائمة اهتمامك',
-      followUp: 'متابعات مستحقة',
+      follow: 'متابعات مستحقة',
       verify: 'تحديث التحقق من الإعلانات',
       profile: 'ملف مهني دقيق'
     },
     addBtn: '+ إضافة فرصة',
-    loading: 'جاري تحميل البيانات...',
-    noJobs: 'لا توجد فرص مسجلة حالياً.'
+    retry: 'إعادة المحاولة'
   },
   en: {
     toggleBtn: 'العربية',
@@ -70,59 +64,33 @@ const translations = {
       { id: 'messages', label: 'Message Assistant', icon: MessageSquareText },
       { id: 'profile', label: 'Professional Profile', icon: ShieldCheck }
     ],
-    stats: {
-      total: { label: 'Total Opportunities', hint: 'All opportunities in one place' },
-      active: { label: 'Active Applications', hint: 'In-progress follow-ups' },
-      due: { label: 'Requires Follow-up', hint: 'Actions due this week' },
-      match: { label: 'High Match', hint: 'Strong profile alignment' }
-    },
+    stats: [
+      { label: 'Total Opportunities', hint: 'All opportunities in one place', tone: 'teal' },
+      { label: 'Active Applications', hint: 'In-progress follow-ups', tone: 'blue' },
+      { label: 'Follow-up Needed', hint: 'Actions due this week', tone: 'amber' },
+      { label: 'High Match', hint: 'Strong profile alignment', tone: 'emerald' }
+    ],
     banner: {
       tag: "This Week's Focus",
       title: 'The strongest opportunity begins with a clearer decision.',
       desc: 'Review official announcements, target key requirements with your fluids expertise, and sharpen your direct messaging.',
       action: 'Open Weekly Review'
     },
-    quickList: {
+    quick: {
       title: 'On Your Radar',
-      followUp: 'Due Follow-ups',
+      follow: 'Due Follow-ups',
       verify: 'Verification Updates',
       profile: 'Verified Engineering Profile'
     },
     addBtn: '+ Add Opportunity',
-    loading: 'Loading data...',
-    noJobs: 'No opportunities recorded yet.'
+    retry: 'Retry'
   }
 };
-
-const safeUrl = (s: string) => {
-  try {
-    const u = new URL(s);
-    return ['https:', 'http:'].includes(u.protocol) ? u.href : '';
-  } catch {
-    return '';
-  }
-};
-
-const initials = (s: string) =>
-  s
-    .split(' ')
-    .map(x => x[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
 
 export default function Dashboard() {
   const [lang, setLang] = useState<'ar' | 'en'>('ar');
   const t = translations[lang];
 
-  const fmt = (s: string) =>
-    new Date(s + 'T12:00:00').toLocaleDateString(t.fmtLocale, {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    });
-
-  // دالة تحويل وعرض الأرقام طبقاً للغة المختارة
   const formatNum = (val: number) => new Intl.NumberFormat(t.fmtLocale).format(val);
 
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -158,137 +126,152 @@ export default function Dashboard() {
   const due = jobs.filter(j => followDue(j));
   const eligibleList = jobs.filter(j => eligible(j));
 
-  const statCards = [
-    { label: t.stats.total.label, val: formatNum(jobs.length), hint: t.stats.total.hint, tone: 'teal' },
-    { label: t.stats.active.label, val: formatNum(active.length), hint: t.stats.active.hint, tone: 'blue' },
-    { label: t.stats.due.label, val: formatNum(due.length), hint: t.stats.due.hint, tone: 'amber' },
-    { label: t.stats.match.label, val: formatNum(eligibleList.length), hint: t.stats.match.hint, tone: 'emerald' }
-  ];
+  const statVals = [jobs.length, active.length, due.length, eligibleList.length];
 
   return (
-    <div dir={t.dir} className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans transition-all duration-300">
-      {/* Toast Notification */}
+    <div dir={t.dir} className="shell">
       {toast && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-emerald-700 text-white px-5 py-2.5 rounded-xl shadow-xl flex items-center gap-2">
-          <Check size={18} /> <span>{toast}</span>
+        <div className="toast" role="status">
+          <Check size={18} />
+          <span>{toast}</span>
         </div>
       )}
 
-      {/* Main Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-40 px-6 py-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">
+      {/* شريط الرأس الأصلي مع زر تبديل اللغة */}
+      <header className="brand" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div className="brand-logo" style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#059669', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
             م
           </div>
           <div>
-            <h1 className="font-extrabold text-lg tracking-tight">مسار | Masar</h1>
-            <p className="text-xs text-slate-500 font-medium">{t.userRole}</p>
+            <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>مسار | Masar</h1>
+            <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{t.userRole}</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* زر تبديل اللغة المزدوج */}
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <button
             type="button"
             onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}
-            className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 font-semibold text-xs text-slate-700 transition"
+            style={{
+              padding: '6px 14px',
+              borderRadius: '8px',
+              border: '1px solid #cbd5e1',
+              background: '#fff',
+              cursor: 'pointer',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '0.85rem'
+            }}
           >
-            <Globe size={15} />
-            <span>{t.toggleBtn}</span>
+            <Globe size={16} />
+            {t.toggleBtn}
           </button>
-
-          <button
-            type="button"
-            className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-1.5 shadow-sm transition"
-          >
+          <button type="button" className="btn-primary" style={{ padding: '8px 16px', borderRadius: '8px', background: '#047857', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Plus size={16} />
-            <span>{t.addBtn}</span>
+            {t.addBtn}
           </button>
         </div>
       </header>
 
-      <div className="flex flex-1">
-        {/* Navigation Sidebar */}
-        <aside className="w-64 bg-white border-e border-slate-200 p-4 flex flex-col gap-1">
+      <div style={{ display: 'flex', flex: 1 }}>
+        {/* القائمة الجانبية الأصلية */}
+        <aside className="sidebar">
           {t.tabs.map(item => {
             const Icon = item.icon;
-            const active = tab === item.id;
+            const isCur = tab === item.id;
             return (
               <button
                 key={item.id}
                 onClick={() => setTab(item.id)}
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-xs transition ${
-                  active ? 'bg-emerald-50 text-emerald-800 font-bold' : 'text-slate-600 hover:bg-slate-50'
-                }`}
+                className={`tab-btn ${isCur ? 'active' : ''}`}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: isCur ? '#ecfdf5' : 'transparent',
+                  color: isCur ? '#065f46' : '#475569',
+                  fontWeight: isCur ? 700 : 500,
+                  cursor: 'pointer',
+                  marginBottom: '4px'
+                }}
               >
-                <Icon size={17} className={active ? 'text-emerald-700' : 'text-slate-400'} />
+                <Icon size={18} />
                 <span>{item.label}</span>
               </button>
             );
           })}
         </aside>
 
-        {/* Content View */}
-        <main className="flex-1 p-6 space-y-6">
+        {/* مساحة العمل الأصلية */}
+        <main className="content" style={{ flex: 1, padding: '1.5rem' }}>
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-xs flex justify-between items-center">
+            <div className="alert-error" style={{ padding: '1rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', color: '#b91c1c', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between' }}>
               <span>{error}</span>
-              <button onClick={load} className="underline font-bold">إعادة المحاولة / Retry</button>
+              <button onClick={load} style={{ textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}>{t.retry}</button>
             </div>
           )}
 
           {tab === 'overview' && (
-            <>
-              {/* Stats Cards Row */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {statCards.map((c, i) => (
-                  <div key={i} className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm flex flex-col justify-between">
-                    <span className="text-xs text-slate-500 font-medium">{c.label}</span>
-                    <span className="text-3xl font-black text-slate-800 my-2">{c.val}</span>
-                    <span className="text-[11px] text-slate-400">{c.hint}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {/* صف البطاقات الأربع مع دعم الأرقام الثنائي */}
+              <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                {t.stats.map((s, idx) => (
+                  <div key={idx} className="stat-card" style={{ background: '#fff', border: '1px solid #e2e8f0', padding: '1.25rem', borderRadius: '14px' }}>
+                    <div style={{ color: '#64748b', fontSize: '0.85rem' }}>{s.label}</div>
+                    <div style={{ fontSize: '2rem', fontWeight: 900, color: '#0f172a', margin: '0.5rem 0' }}>
+                      {formatNum(statVals[idx])}
+                    </div>
+                    <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>{s.hint}</div>
                   </div>
                 ))}
               </div>
 
-              {/* Action Banner */}
-              <div className="bg-emerald-900 text-white rounded-2xl p-6 flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm">
-                <div className="space-y-1 text-center md:text-start">
-                  <span className="bg-emerald-800 text-emerald-200 text-[11px] px-2.5 py-0.5 rounded-full font-bold">
+              {/* بنر التركيز الأسبوعي */}
+              <div className="action-banner" style={{ background: '#064e3b', color: '#fff', padding: '1.5rem', borderRadius: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <span style={{ background: '#065f46', color: '#a7f3d0', fontSize: '0.75rem', padding: '4px 8px', borderRadius: '6px', fontWeight: 'bold' }}>
                     {t.banner.tag}
                   </span>
-                  <h3 className="text-lg font-bold">{t.banner.title}</h3>
-                  <p className="text-xs text-emerald-100 max-w-xl leading-relaxed">{t.banner.desc}</p>
+                  <h3 style={{ margin: '0.5rem 0', fontSize: '1.15rem' }}>{t.banner.title}</h3>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#d1fae5' }}>{t.banner.desc}</p>
                 </div>
                 <button
                   onClick={() => setTab('weekly')}
-                  className="bg-white text-emerald-950 font-bold text-xs px-4 py-2.5 rounded-xl hover:bg-emerald-50 flex items-center gap-2 whitespace-nowrap shadow-sm transition"
+                  style={{ background: '#fff', color: '#064e3b', border: 'none', padding: '10px 16px', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}
                 >
-                  <span>{t.banner.action}</span>
-                  {lang === 'ar' ? <ArrowLeft size={15} /> : <ArrowRight size={15} />}
+                  {t.banner.action}
+                  {lang === 'ar' ? <ArrowLeft size={16} /> : <ArrowRight size={16} />}
                 </button>
               </div>
 
-              {/* Radar Items Preview */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-5">
-                <h4 className="text-sm font-bold text-slate-800 mb-3">{t.quickList.title}</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs font-medium text-slate-600">
-                    📌 {t.quickList.followUp} ({formatNum(due.length)})
+              {/* قائمة الاهتمام السريع */}
+              <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: '1.25rem', borderRadius: '14px' }}>
+                <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.95rem', fontWeight: 700 }}>{t.quick.title}</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                  <div style={{ padding: '0.75rem', background: '#f8fafc', borderRadius: '10px', fontSize: '0.85rem', border: '1px solid #f1f5f9' }}>
+                    📌 {t.quick.follow} ({formatNum(due.length)})
                   </div>
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs font-medium text-slate-600">
-                    ⚡ {t.quickList.verify}
+                  <div style={{ padding: '0.75rem', background: '#f8fafc', borderRadius: '10px', fontSize: '0.85rem', border: '1px solid #f1f5f9' }}>
+                    ⚡ {t.quick.verify}
                   </div>
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs font-medium text-slate-600">
-                    🛡️ {t.quickList.profile}
+                  <div style={{ padding: '0.75rem', background: '#f8fafc', borderRadius: '10px', fontSize: '0.85rem', border: '1px solid #f1f5f9' }}>
+                    🛡️ {t.quick.profile}
                   </div>
                 </div>
               </div>
-            </>
+            </div>
           )}
 
           {tab !== 'overview' && (
-            <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-500 text-xs">
-              محتوى التبويب قيد المعاينة ({tab})
+            <div style={{ background: '#fff', padding: '2rem', borderRadius: '14px', textAlign: 'center', color: '#64748b' }}>
+              {t.tabs.find(x => x.id === tab)?.label} - Under Review
             </div>
           )}
         </main>
