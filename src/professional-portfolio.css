@@ -1,0 +1,20 @@
+.portfolio{background:#fff;color:#16352f;border-radius:16px;padding:24px;margin-bottom:24px;border:1px solid #dbe8e5;font-family:inherit}
+.portfolio-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.portfolio-heading h2{margin:0 0 8px;font-size:1.5rem}.portfolio-heading p{margin:0 0 15px;color:#667b75}
+.portfolio-chip{border:1px solid #cce2da;border-radius:30px;padding:8px 12px;background:#eff9f4;font-size:.85rem}
+.portfolio-tabs{display:flex;flex-wrap:wrap;gap:8px;border-bottom:1px solid #dbe8e5;padding:12px 0}
+.portfolio button{cursor:pointer;border:1px solid #d6e3de;border-radius:8px;padding:9px 12px;background:white;color:#184b43}
+.portfolio-tabs button.active,.portfolio-main-button{background:#106d60!important;color:#fff!important;border-color:#106d60!important}
+.portfolio-toolbar{display:flex;justify-content:space-between;gap:12px;margin:18px 0}
+.portfolio-toolbar input{width:min(480px,75%)}
+.portfolio input,.portfolio textarea,.portfolio select{border:1px solid #cadad4;border-radius:8px;padding:10px;background:#fff;color:#183b34;font:inherit;box-sizing:border-box}
+.portfolio-table-wrap{overflow-x:auto}.portfolio-table{border-collapse:collapse;width:100%;min-width:690px}
+.portfolio-table th,.portfolio-table td{padding:11px 12px;text-align:start;border-bottom:1px solid #e0eae5;font-size:.92rem}
+.portfolio-table th{background:#eef5f2;font-weight:700}.portfolio-table td:last-child{white-space:nowrap}.portfolio-table td button{margin-inline-end:5px}
+.portfolio-notice{font-size:.9rem;background:#fff7e7;color:#755226;border-radius:8px;padding:10px 12px}.portfolio-error{background:#fff0ee;color:#a52222;padding:12px;border-radius:8px}
+.portfolio-dialog-backdrop{position:fixed;inset:0;background:#142b2880;display:flex;align-items:center;justify-content:center;z-index:999;padding:16px}
+.portfolio-dialog{background:#fff;border-radius:16px;padding:22px;width:min(710px,96vw);max-height:88vh;overflow:auto;box-shadow:0 18px 70px #0003}
+.portfolio-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.portfolio-fields label{display:flex;flex-direction:column;gap:7px;font-size:.92rem}
+.portfolio-fields input,.portfolio-fields select,.portfolio-fields textarea{width:100%}.portfolio-fields .portfolio-full{grid-column:1/-1}
+.portfolio-fields .portfolio-check{flex-direction:row;align-items:center;grid-column:1/-1}.portfolio-dialog footer{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+@media(max-width:600px){.portfolio{padding:12px}.portfolio-fields{grid-template-columns:1fr}.portfolio-fields .portfolio-full,.portfolio-fields .portfolio-check{grid-column:1}.portfolio-toolbar{flex-wrap:wrap}.portfolio-toolbar input{width:100%}}
